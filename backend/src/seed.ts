@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import pool from './config/database';
+import db from './config/database';
 import { v4 as uuidv4 } from 'uuid';
 
 const SALT_ROUNDS = 10;
@@ -119,18 +119,16 @@ const mockAttachments = [
 ];
 
 async function seedDatabase() {
-  const client = await pool.connect();
-  
   try {
     console.log('🌱 Starting database seeding...');
     
     // Clear existing data
     console.log('🧹 Clearing existing data...');
-    await client.query('DELETE FROM chat_messages');
-    await client.query('DELETE FROM attachments');
-    await client.query('DELETE FROM task_assignees');
-    await client.query('DELETE FROM tasks');
-    await client.query('DELETE FROM users');
+    await db.run('DELETE FROM chat_messages');
+    await db.run('DELETE FROM attachments');
+    await db.run('DELETE FROM task_assignees');
+    await db.run('DELETE FROM tasks');
+    await db.run('DELETE FROM users');
     
     // Seed users
     console.log('👥 Seeding users...');
@@ -138,25 +136,25 @@ async function seedDatabase() {
       const hashedPassword = await bcrypt.hash(user.password, SALT_ROUNDS);
       const avatarUrl = `https://i.pravatar.cc/150?u=${user.id}`;
       
-      await client.query(`
+      await db.run(`
         INSERT INTO users (id, full_name, email, username, password, phone, role, avatar_url)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `, [user.id, user.fullName, user.email, user.username, hashedPassword, user.phone, user.role, avatarUrl]);
     }
     
     // Seed tasks
     console.log('📋 Seeding tasks...');
     for (const task of mockTasks) {
-      await client.query(`
+      await db.run(`
         INSERT INTO tasks (id, title, description, priority, due_date, status, notes)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `, [task.id, task.title, task.description, task.priority, task.dueDate, task.status, task.notes || null]);
       
       // Assign users to tasks
       for (const assigneeId of task.assigneeIds) {
-        await client.query(`
+        await db.run(`
           INSERT INTO task_assignees (task_id, user_id)
-          VALUES ($1, $2)
+          VALUES (?, ?)
         `, [task.id, assigneeId]);
       }
     }
@@ -165,9 +163,9 @@ async function seedDatabase() {
     console.log('💬 Seeding chat messages...');
     for (const message of mockChatMessages) {
       const messageId = uuidv4();
-      await client.query(`
+      await db.run(`
         INSERT INTO chat_messages (id, task_id, user_id, text)
-        VALUES ($1, $2, $3, $4)
+        VALUES (?, ?, ?, ?)
       `, [messageId, message.taskId, message.userId, message.text]);
     }
     
@@ -175,9 +173,9 @@ async function seedDatabase() {
     console.log('📎 Seeding attachments...');
     for (const attachment of mockAttachments) {
       const attachmentId = uuidv4();
-      await client.query(`
+      await db.run(`
         INSERT INTO attachments (id, task_id, name, url, uploader_id)
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES (?, ?, ?, ?, ?)
       `, [attachmentId, attachment.taskId, attachment.name, attachment.url, attachment.uploaderId]);
     }
     
@@ -196,8 +194,6 @@ async function seedDatabase() {
   } catch (error) {
     console.error('❌ Error seeding database:', error);
     throw error;
-  } finally {
-    client.release();
   }
 }
 

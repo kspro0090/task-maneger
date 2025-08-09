@@ -41,6 +41,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
+    ok: true,
     status: 'OK', 
     message: 'Task Management API is running',
     timestamp: new Date().toISOString()

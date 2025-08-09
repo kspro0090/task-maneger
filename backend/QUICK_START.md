@@ -1,104 +1,110 @@
 # Quick Start Guide
 
-Get the Task Management API up and running in just a few minutes!
+Get the Task Management API up and running in minutes with SQLite.
 
 ## Prerequisites
 
-Make sure you have these installed:
-- Node.js (v16+)
-- PostgreSQL (v12+)
-- npm or yarn
+- Node.js (v16 or higher)
+- npm
 
-## 1. Install Dependencies
+## Steps
 
+### 1. Install Dependencies
 ```bash
 cd backend
 npm install
 ```
 
-## 2. Setup Database
-
-### Create Database
-```sql
-CREATE DATABASE task_management;
-```
-
-### Run Schema
-```bash
-psql -U postgres -d task_management -f src/models/database.sql
-```
-
-## 3. Configure Environment
-
+### 2. Set Up Environment (Optional)
 ```bash
 cp .env.example .env
-# Edit .env with your database credentials
+# Edit .env if you want to change default settings
 ```
 
-## 4. Seed Database (Optional)
+The default configuration works out of the box:
+- Database: `./data.db` (SQLite file)
+- Port: `3001`
+- JWT Secret: Development key (change for production)
 
+### 3. Initialize Database
+```bash
+npm run setup
+```
+
+This creates the SQLite database file and all necessary tables.
+
+### 4. Seed with Sample Data
 ```bash
 npm run seed
 ```
 
-This creates sample users and tasks with these login credentials:
-- **Admin**: `admin` / `password123`
-- **Staff**: `zahra` / `password123`
-- **Staff**: `babak` / `password123`
+This adds sample users and tasks to get you started.
 
-## 5. Start Server
-
+### 5. Start the Server
 ```bash
 npm run dev
 ```
 
-The API will be available at `http://localhost:3001`
+The API will be available at: http://localhost:3001
 
-## 6. Test the API
+## Test the API
 
-### Login
+### Login as Admin
 ```bash
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "password123"}'
+  -d '{"username":"admin","password":"password123"}'
 ```
 
-### Get Tasks (with token from login response)
+### Get Tasks (requires token from login)
 ```bash
-curl -X GET http://localhost:3001/api/tasks \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  http://localhost:3001/api/tasks
 ```
 
-## API Documentation
+## Sample Accounts
 
-Visit the [README.md](README.md) for complete API documentation.
+After seeding, you can log in with:
 
-## Health Check
+- **Admin**: `admin` / `password123`
+- **Staff**: `zahra` / `password123`
+- **Staff**: `babak` / `password123`
 
-Visit `http://localhost:3001/health` to verify the server is running.
+## Database Location
+
+Your SQLite database is stored at `backend/data.db`. This file contains all your data and persists across server restarts.
+
+## Production Setup
+
+For production:
+
+1. Change JWT secret in `.env`:
+   ```
+   JWT_SECRET=your-super-secure-random-string-here
+   ```
+
+2. Build the project:
+   ```bash
+   npm run build
+   npm start
+   ```
+
+3. Set up proper file permissions for the database file
+
+4. Consider backup strategies for the `data.db` file
 
 ## Troubleshooting
 
-### Database Connection Issues
-- Verify PostgreSQL is running
-- Check database credentials in `.env`
-- Ensure database `task_management` exists
+**Port already in use?**
+- Change the port in `.env`: `PORT=3002`
+- Or kill existing processes: `pkill -f node`
 
-### Port Already in Use
-- Change `PORT` in `.env` to use a different port
-- Or stop other services using port 3001
+**Database errors?**
+- Delete `data.db` and run `npm run setup` again
+- Check file permissions
 
-### Missing Dependencies
-```bash
-npm install
-npm run build
-```
+**Can't login?**
+- Make sure you ran `npm run seed`
+- Check the seeded usernames and passwords above
 
-## Next Steps
-
-1. Connect your React frontend to this API
-2. Configure production environment variables
-3. Set up proper logging and monitoring
-4. Deploy to your preferred hosting platform
-
-Happy coding! 🚀
+That's it! You now have a fully functional task management API running with SQLite.
