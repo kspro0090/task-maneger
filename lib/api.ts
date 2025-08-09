@@ -1,3 +1,5 @@
+import type { Task, User } from './types';
+
 export const API_BASE =
   (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
@@ -5,7 +7,7 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = localStorage.getItem('token');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
   if (token) headers.set('Authorization', `Bearer ${token}`);
@@ -19,48 +21,50 @@ export async function login(username: string, password: string) {
     method: 'POST',
     body: JSON.stringify({ username, password }),
   });
-  localStorage.setItem('token', data.token);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('token', data.token);
+  }
   return data;
 }
 
-export async function getTasks() {
-  return apiFetch('/api/tasks');
+export async function getTasks(): Promise<Task[]> {
+  return apiFetch<Task[]>('/api/tasks');
 }
 
-export async function getUsers() {
-  return apiFetch('/api/users');
+export async function getUsers(): Promise<User[]> {
+  return apiFetch<User[]>('/api/users');
 }
 
-export async function createTask(task: any) {
-  return apiFetch('/api/tasks', {
+export async function createTask(task: Partial<Task>): Promise<Task> {
+  return apiFetch<Task>('/api/tasks', {
     method: 'POST',
     body: JSON.stringify(task),
   });
 }
 
-export async function updateTask(id: string, updates: any) {
-  return apiFetch(`/api/tasks/${id}`, {
+export async function updateTask(id: string, updates: Partial<Task>): Promise<Task> {
+  return apiFetch<Task>(`/api/tasks/${id}`, {
     method: 'PUT',
     body: JSON.stringify(updates),
   });
 }
 
-export async function createUser(user: any) {
-  return apiFetch('/api/users', {
+export async function createUser(user: Partial<User>): Promise<User> {
+  return apiFetch<User>('/api/users', {
     method: 'POST',
     body: JSON.stringify(user),
   });
 }
 
-export async function updateUser(id: string, updates: any) {
-  return apiFetch(`/api/users/${id}`, {
+export async function updateUser(id: string, updates: Partial<User>): Promise<User> {
+  return apiFetch<User>(`/api/users/${id}`, {
     method: 'PUT',
     body: JSON.stringify(updates),
   });
 }
 
-export async function deleteUser(id: string) {
-  return apiFetch(`/api/users/${id}`, {
+export async function deleteUser(id: string): Promise<void> {
+  return apiFetch<void>(`/api/users/${id}`, {
     method: 'DELETE',
   });
 }
@@ -76,7 +80,7 @@ export async function uploadAttachment(taskId: string, file: File) {
   const formData = new FormData();
   formData.append('file', file);
   
-  const token = localStorage.getItem('token');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const headers = new Headers();
   if (token) headers.set('Authorization', `Bearer ${token}`);
   

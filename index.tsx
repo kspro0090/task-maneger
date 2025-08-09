@@ -1,71 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
-
-// --- TYPE DEFINITIONS ---
-type UserRole = 'admin' | 'staff' | 'viewer';
-type TaskStatus = 'backlog' | 'todo' | 'doing' | 'done' | 'returned' | 'approved' | 'rejected';
-type TaskPriority = 'low' | 'medium' | 'high';
-
-interface User {
-  id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  role: UserRole;
-  avatarUrl: string;
-  username: string;
-  password: string; // In a real app, this should be a hash
-}
-
-interface Attachment {
-  id: string;
-  name: string;
-  url: string; // In a real app, this would be a signed URL from a storage service
-  uploaderId: string;
-}
-
-interface ChatMessage {
-  id: string;
-  userId: string;
-  text: string;
-  timestamp: string;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  priority: TaskPriority;
-  dueDate: string; // YYYY-MM-DD
-  assigneeIds: string[];
-  status: TaskStatus;
-  notes?: string;
-  attachments: Attachment[];
-  chatMessages: ChatMessage[];
-}
-
-// --- MOCK DATA ---
-const mockUsers: User[] = [
-  { id: 'u1', fullName: 'آرش مدیر', email: 'admin@example.com', phone: '09120000001', role: 'admin', avatarUrl: 'https://i.pravatar.cc/150?u=u1', username: 'admin', password: 'password123' },
-  { id: 'u2', fullName: 'زهرا کارمند', email: 'zahra@example.com', phone: '09120000002', role: 'staff', avatarUrl: 'https://i.pravatar.cc/150?u=u2', username: 'zahra', password: 'password123' },
-  { id: 'u3', fullName: 'بابک کارمند', email: 'babak@example.com', phone: '09120000003', role: 'staff', avatarUrl: 'https://i.pravatar.cc/150?u=u3', username: 'babak', password: 'password123' },
-];
-
-const mockTasks: Task[] = [
-  { id: 't1', title: 'طراحی صفحه ورود', description: 'ایجاد ماکاپ و UI نهایی برای صفحه لاگین کاربران.', priority: 'high', dueDate: '2024-08-15', assigneeIds: ['u2'], status: 'doing', notes: 'طرح اولیه در فیگما آماده است.', attachments: [], chatMessages: [] },
-  { id: 't2', title: 'آماده‌سازی گزارش هفتگی', description: 'جمع‌آوری داده‌های فروش و عملکرد تیم در هفته گذشته.', priority: 'medium', dueDate: '2024-08-12', assigneeIds: ['u3'], status: 'todo', attachments: [], chatMessages: [] },
-  { id: 't3', title: 'اصلاح باگ نمایش تاریخ', description: 'در پروفایل کاربری تاریخ تولد به اشتباه نمایش داده می‌شود.', priority: 'high', dueDate: '2024-08-11', assigneeIds: ['u2'], status: 'done', attachments: [], chatMessages: [] },
-  { id: 't4', title: 'بررسی و تایید تسک #3', description: 'تسک "اصلاح باگ نمایش تاریخ" که توسط زهرا انجام شده باید بررسی و تایید نهایی شود.', priority: 'medium', dueDate: '2024-08-12', assigneeIds: ['u1'], status: 'done', attachments: [], chatMessages: [] },
-  { id: 't5', title: 'نوشتن مستندات API', description: 'توضیح کامل اندپوینت‌های کاربران و تسک‌ها در Postman.', priority: 'low', dueDate: '2024-08-20', assigneeIds: ['u3'], status: 'backlog', attachments: [], chatMessages: [] },
-  { id: 't6', title: 'پاسخ به تیکت‌های پشتیبانی', description: 'پاسخ به تمام تیکت‌های باز مانده از هفته گذشته.', priority: 'high', dueDate: '2024-08-10', assigneeIds: ['u2'], status: 'approved', attachments: [{id: 'a1', name: 'log.txt', uploaderId: 'u2', url: '#'}], chatMessages: [] },
-  { id: 't7', title: 'برنامه‌ریزی اسپرینت بعدی', description: 'جلسه با تیم محصول برای اولویت‌بندی تسک‌های اسپرینت آینده.', priority: 'medium', dueDate: '2024-08-18', assigneeIds: ['u1'], status: 'todo', attachments: [], chatMessages: [] },
-  { id: 't8', title: 'آپدیت کردن وابستگی‌های پروژه', description: 'اجرای npm install برای به‌روزرسانی پکیج‌های سمت فرانت‌اند و بک‌اند.', priority: 'low', dueDate: '2024-08-25', assigneeIds: ['u3'], status: 'backlog', attachments: [], chatMessages: [] },
-  { id: 't9', title: 'تست تسک گروهی', description: 'این تسک به صورت مشترک به زهرا و بابک تخصیص داده شده است.', priority: 'medium', dueDate: '2024-08-22', assigneeIds: ['u2', 'u3'], status: 'returned', attachments: [], chatMessages: [
-      { id: 'cm1', userId: 'u2', text: 'سلام بابک، از کدوم بخش شروع کنیم؟', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-      { id: 'cm2', userId: 'u3', text: 'سلام زهرا. من بخش تست فرانت‌اند رو برمی‌دارم.', timestamp: new Date(Date.now() - 1000 * 60 * 2).toISOString() }
-  ]},
-];
+import type { User, Task, TaskStatus, TaskPriority, UserRole } from './lib/types';
+import { login, getTasks, getUsers, createTask as apiCreateTask, updateTask as apiUpdateTask, createUser as apiCreateUser, updateUser as apiUpdateUser, deleteUser as apiDeleteUser } from './lib/api';
 
 
 // --- UTILITIES ---
@@ -540,13 +477,13 @@ const Header: React.FC<{ user: User; onThemeToggle: () => void; theme: string; o
   );
 };
 
-const LoginPage: React.FC<{ onLogin: (username: string, password: string) => void; error: string;}> = ({ onLogin, error }) => {
+const LoginPage: React.FC<{ onLogin: (username: string, password: string) => Promise<void>; error: string; loading?: boolean;}> = ({ onLogin, error, loading }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onLogin(username, password);
+        await onLogin(username, password);
     }
 
     return (
@@ -562,7 +499,9 @@ const LoginPage: React.FC<{ onLogin: (username: string, password: string) => voi
                     <input type="password" id="password" value={password} onChange={e => setPassword(e.target.value)} required />
                 </div>
                 {error && <p className="error-message">{error}</p>}
-                <button type="submit" className="form-submit-button">ورود</button>
+                <button type="submit" className="form-submit-button" disabled={loading}>
+                  {loading ? 'در حال ورود...' : 'ورود'}
+                </button>
             </form>
         </div>
     )
@@ -575,8 +514,8 @@ const MainApp: React.FC<{
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
   onLogout: () => void;
-  onSaveUser: (user: Omit<User, 'avatarUrl'>) => void;
-  onDeleteUser: (userId: string) => void;
+  onSaveUser: (user: Omit<User, 'avatarUrl'>) => Promise<void>;
+  onDeleteUser: (userId: string) => Promise<void>;
   onOpenNewTaskModal: () => void;
   onTaskClick: (task: Task) => void;
 }> = (props) => {
@@ -664,62 +603,120 @@ const MainApp: React.FC<{
 
 const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [users, setUsers] = useState<User[]>(mockUsers);
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [users, setUsers] = useState<User[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loginError, setLoginError] = useState('');
+  const [loading, setLoading] = useState(false);
   
   const [isTaskModalOpen, setTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  // Load data when user is logged in
+  useEffect(() => {
+    if (currentUser) {
+      loadData();
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [tasksData, usersData] = await Promise.all([
+        getTasks(),
+        getUsers()
+      ]);
+      setTasks(tasksData);
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  const handleLogin = (username: string, password: string) => {
-    const user = users.find(u => u.username === username && u.password === password);
-    if(user) {
-        setCurrentUser(user);
-        setLoginError('');
-    } else {
-        setLoginError('نام کاربری یا رمز عبور اشتباه است.');
+  const handleLogin = async (username: string, password: string) => {
+    setLoading(true);
+    setLoginError('');
+    try {
+      await login(username, password);
+      // After successful login, we need to get the current user info
+      // For now, we'll create a minimal user object
+      // In a real implementation, the backend should return user info with the token
+      setCurrentUser({ 
+        id: username, 
+        username, 
+        fullName: username, 
+        email: '', 
+        phone: '', 
+        role: 'staff' as UserRole, 
+        avatarUrl: `https://i.pravatar.cc/150?u=${username}`,
+        password: '' 
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError('نام کاربری یا رمز عبور اشتباه است.');
+    } finally {
+      setLoading(false);
     }
   }
 
   const handleLogout = () => {
     setCurrentUser(null);
+    setUsers([]);
+    setTasks([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+    }
   }
 
-  const handleSaveUser = (userToSave: Omit<User, 'avatarUrl'>) => {
-    setUsers(prevUsers => {
-      const existingUserIndex = prevUsers.findIndex(u => u.id === userToSave.id);
-      if (existingUserIndex > -1) {
-        const updatedUsers = [...prevUsers];
-        const oldUser = updatedUsers[existingUserIndex];
-        updatedUsers[existingUserIndex] = { ...oldUser, ...userToSave };
-        return updatedUsers;
+  const handleSaveUser = async (userToSave: Omit<User, 'avatarUrl'>) => {
+    try {
+      if (userToSave.id) {
+        // Update existing user
+        const updatedUser = await apiUpdateUser(userToSave.id, userToSave);
+        setUsers(prevUsers => 
+          prevUsers.map(u => u.id === userToSave.id ? updatedUser : u)
+        );
       } else {
-        const newAvatar = `https://i.pravatar.cc/150?u=${userToSave.id}`;
-        return [...prevUsers, { ...userToSave, id: userToSave.id || `u${Date.now()}`, avatarUrl: newAvatar }];
+        // Create new user
+        const newUser = await apiCreateUser({
+          ...userToSave,
+          avatarUrl: `https://i.pravatar.cc/150?u=${userToSave.username}`
+        });
+        setUsers(prevUsers => [...prevUsers, newUser]);
       }
-    });
+    } catch (error) {
+      console.error('Error saving user:', error);
+      alert('خطا در ذخیره کاربر. لطفا دوباره تلاش کنید.');
+    }
   };
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: string) => {
      if(currentUser?.id === userId) {
         alert("شما نمی توانید خودتان را حذف کنید.");
         return;
      }
-     setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
-     // Also unassign tasks from the deleted user
-     setTasks(prevTasks => prevTasks.map(task => ({
-        ...task,
-        assigneeIds: task.assigneeIds.filter(id => id !== userId)
-     })))
+     try {
+       await apiDeleteUser(userId);
+       setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+       // Also unassign tasks from the deleted user
+       setTasks(prevTasks => prevTasks.map(task => ({
+          ...task,
+          assigneeIds: task.assigneeIds.filter(id => id !== userId)
+       })));
+     } catch (error) {
+       console.error('Error deleting user:', error);
+       alert('خطا در حذف کاربر. لطفا دوباره تلاش کنید.');
+     }
   }
   
   const handleOpenNewTaskModal = () => {
@@ -732,22 +729,27 @@ const App: React.FC = () => {
     setTaskModalOpen(true);
   }
   
-  const handleSaveTask = (taskToSave: Omit<Task, 'id'> & {id?: string}) => {
-    setTasks(prevTasks => {
-        const existingTaskIndex = prevTasks.findIndex(t => t.id === taskToSave.id);
-        if (existingTaskIndex > -1) {
-            const updatedTasks = [...prevTasks];
-            updatedTasks[existingTaskIndex] = { ...updatedTasks[existingTaskIndex], ...taskToSave, id: taskToSave.id! };
-            return updatedTasks;
-        } else {
-            const newTask = { ...taskToSave, id: `t${Date.now()}`};
-            return [...prevTasks, newTask];
-        }
-    })
+  const handleSaveTask = async (taskToSave: Omit<Task, 'id'> & {id?: string}) => {
+    try {
+      if (taskToSave.id) {
+        // Update existing task
+        const updatedTask = await apiUpdateTask(taskToSave.id, taskToSave);
+        setTasks(prevTasks => 
+          prevTasks.map(t => t.id === taskToSave.id ? updatedTask : t)
+        );
+      } else {
+        // Create new task
+        const newTask = await apiCreateTask(taskToSave);
+        setTasks(prevTasks => [...prevTasks, newTask]);
+      }
+    } catch (error) {
+      console.error('Error saving task:', error);
+      alert('خطا در ذخیره تسک. لطفا دوباره تلاش کنید.');
+    }
   }
 
   if (!currentUser) {
-      return <LoginPage onLogin={handleLogin} error={loginError} />;
+      return <LoginPage onLogin={handleLogin} error={loginError} loading={loading} />;
   }
 
   return (
