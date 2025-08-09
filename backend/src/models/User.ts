@@ -1,16 +1,16 @@
-import pool from '../config/database';
+import db from '../config/database';
 import { User, UserCreate, UserUpdate } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
 export class UserModel {
   static async findAll(): Promise<Omit<User, 'password'>[]> {
-    const result = await pool.query(`
+    const rows = await db.all(`
       SELECT id, full_name, email, username, phone, role, avatar_url, created_at, updated_at 
       FROM users 
       ORDER BY created_at DESC
     `);
     
-    return result.rows.map((row: any) => ({
+    return rows.map((row: any) => ({
       id: row.id,
       fullName: row.full_name,
       email: row.email,
@@ -24,14 +24,13 @@ export class UserModel {
   }
 
   static async findById(id: string): Promise<User | null> {
-    const result = await pool.query(
-      'SELECT * FROM users WHERE id = $1',
+    const row = await db.get(
+      'SELECT * FROM users WHERE id = ?',
       [id]
     );
     
-    if (result.rows.length === 0) return null;
+    if (!row) return null;
     
-    const row = result.rows[0];
     return {
       id: row.id,
       fullName: row.full_name,
@@ -47,14 +46,13 @@ export class UserModel {
   }
 
   static async findByUsername(username: string): Promise<User | null> {
-    const result = await pool.query(
-      'SELECT * FROM users WHERE username = $1',
+    const row = await db.get(
+      'SELECT * FROM users WHERE username = ?',
       [username]
     );
     
-    if (result.rows.length === 0) return null;
+    if (!row) return null;
     
-    const row = result.rows[0];
     return {
       id: row.id,
       fullName: row.full_name,
@@ -70,14 +68,13 @@ export class UserModel {
   }
 
   static async findByEmail(email: string): Promise<User | null> {
-    const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
+    const row = await db.get(
+      'SELECT * FROM users WHERE email = ?',
       [email]
     );
     
-    if (result.rows.length === 0) return null;
+    if (!row) return null;
     
-    const row = result.rows[0];
     return {
       id: row.id,
       fullName: row.full_name,
@@ -96,13 +93,16 @@ export class UserModel {
     const id = uuidv4();
     const avatarUrl = `https://i.pravatar.cc/150?u=${id}`;
     
-    const result = await pool.query(`
+    await db.run(`
       INSERT INTO users (id, full_name, email, username, password, phone, role, avatar_url)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id, full_name, email, username, phone, role, avatar_url, created_at, updated_at
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [id, userData.fullName, userData.email, userData.username, userData.password, userData.phone, userData.role, avatarUrl]);
     
-    const row = result.rows[0];
+    const row = await db.get(`
+      SELECT id, full_name, email, username, phone, role, avatar_url, created_at, updated_at
+      FROM users WHERE id = ?
+    `, [id]);
+    
     return {
       id: row.id,
       fullName: row.full_name,
@@ -119,30 +119,29 @@ export class UserModel {
   static async update(id: string, userData: UserUpdate): Promise<Omit<User, 'password'> | null> {
     const fields: string[] = [];
     const values: any[] = [];
-    let paramCount = 1;
 
     if (userData.fullName !== undefined) {
-      fields.push(`full_name = $${paramCount++}`);
+      fields.push(`full_name = ?`);
       values.push(userData.fullName);
     }
     if (userData.email !== undefined) {
-      fields.push(`email = $${paramCount++}`);
+      fields.push(`email = ?`);
       values.push(userData.email);
     }
     if (userData.username !== undefined) {
-      fields.push(`username = $${paramCount++}`);
+      fields.push(`username = ?`);
       values.push(userData.username);
     }
     if (userData.password !== undefined) {
-      fields.push(`password = $${paramCount++}`);
+      fields.push(`password = ?`);
       values.push(userData.password);
     }
     if (userData.phone !== undefined) {
-      fields.push(`phone = $${paramCount++}`);
+      fields.push(`phone = ?`);
       values.push(userData.phone);
     }
     if (userData.role !== undefined) {
-      fields.push(`role = $${paramCount++}`);
+      fields.push(`role = ?`);
       values.push(userData.role);
     }
 
@@ -152,16 +151,19 @@ export class UserModel {
 
     values.push(id);
     
-    const result = await pool.query(`
+    await db.run(`
       UPDATE users 
       SET ${fields.join(', ')}
-      WHERE id = $${paramCount}
-      RETURNING id, full_name, email, username, phone, role, avatar_url, created_at, updated_at
+      WHERE id = ?
     `, values);
     
-    if (result.rows.length === 0) return null;
+    const row = await db.get(`
+      SELECT id, full_name, email, username, phone, role, avatar_url, created_at, updated_at
+      FROM users WHERE id = ?
+    `, [id]);
     
-    const row = result.rows[0];
+    if (!row) return null;
+    
     return {
       id: row.id,
       fullName: row.full_name,
@@ -177,11 +179,11 @@ export class UserModel {
 
   static async delete(id: string): Promise<boolean> {
     // First, remove user from all task assignments
-    await pool.query('DELETE FROM task_assignees WHERE user_id = $1', [id]);
+    await db.run('DELETE FROM task_assignees WHERE user_id = ?', [id]);
     
     // Then delete the user
-    const result = await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    const result = await db.run('DELETE FROM users WHERE id = ?', [id]);
     
-    return (result.rowCount || 0) > 0;
+    return (result.changes || 0) > 0;
   }
 }

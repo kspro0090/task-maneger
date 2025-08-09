@@ -1,338 +1,141 @@
-# Task Management Backend API
+# Task Management Backend
 
-A complete RESTful API backend for a task management application built with Node.js, Express.js, and PostgreSQL.
+A RESTful API backend for a task management application built with Node.js, Express, TypeScript, and SQLite.
 
 ## Features
 
-- 🔐 JWT-based authentication
-- 👥 Role-based access control (Admin, Staff, Viewer)
-- 📋 Task management with assignments
-- 💬 Real-time chat messages on tasks
-- 📎 File attachment support
-- 🔒 Secure password hashing with bcrypt
-- 📁 File upload handling with validation
-- 🛡️ Security middleware (CORS, Helmet)
-- 📊 Database relationships and transactions
+- **User Management**: CRUD operations for users with role-based access control (Admin, Staff, Viewer)
+- **Task Management**: Create, read, update, and delete tasks with assignees, priorities, and status tracking
+- **File Attachments**: Upload and manage task attachments
+- **Real-time Chat**: Task-specific messaging system
+- **Authentication**: JWT-based authentication with role-based authorization
+- **SQLite Database**: File-based database for easy deployment and data persistence
 
-## Technology Stack
+## Database
 
-- **Platform**: Node.js
-- **Framework**: Express.js
-- **Database**: PostgreSQL
-- **Authentication**: JWT (JSON Web Tokens)
-- **Password Hashing**: bcrypt
-- **File Uploads**: Multer
-- **Language**: TypeScript
+This application uses SQLite as the database engine, storing data in a file (`data.db` by default). This provides:
+- Zero configuration setup
+- File-based storage that persists across restarts
+- No need for external database server
+- Easy backup (just copy the file)
 
-## Project Structure
-
-```
-backend/
-├── src/
-│   ├── config/
-│   │   └── database.ts          # PostgreSQL connection
-│   ├── controllers/
-│   │   ├── authController.ts    # Authentication logic
-│   │   ├── userController.ts    # User CRUD operations
-│   │   ├── taskController.ts    # Task management
-│   │   └── uploadController.ts  # File upload handling
-│   ├── middleware/
-│   │   ├── auth.ts             # JWT & role-based middleware
-│   │   └── upload.ts           # Multer file upload middleware
-│   ├── models/
-│   │   ├── types.ts            # TypeScript interfaces
-│   │   ├── User.ts             # User data access layer
-│   │   ├── Task.ts             # Task data access layer
-│   │   └── database.sql        # PostgreSQL schema
-│   ├── routes/
-│   │   ├── auth.ts             # Authentication routes
-│   │   ├── users.ts            # User routes
-│   │   └── tasks.ts            # Task routes
-│   ├── utils/
-│   │   └── jwt.ts              # JWT utility functions
-│   ├── index.ts                # Main Express server
-│   └── seed.ts                 # Database seeding script
-├── uploads/                    # File upload directory
-├── package.json
-├── tsconfig.json
-├── nodemon.json
-└── README.md
-```
-
-## Installation & Setup
+## Quick Start
 
 ### Prerequisites
 
 - Node.js (v16 or higher)
-- PostgreSQL (v12 or higher)
-- npm or yarn
+- npm
 
-### 1. Install Dependencies
+### Installation
 
-```bash
-cd backend
-npm install
-```
+1. **Clone and install dependencies**:
+   ```bash
+   npm install
+   ```
 
-### 2. Database Setup
+2. **Set up environment variables**:
+   ```bash
+   cp .env.example .env
+   # Edit .env file if needed (default values work for development)
+   ```
 
-1. Create a PostgreSQL database:
-```sql
-CREATE DATABASE task_management;
-```
+3. **Initialize the database**:
+   ```bash
+   npm run setup
+   ```
 
-2. Run the database schema:
-```bash
-psql -U postgres -d task_management -f src/models/database.sql
-```
+4. **Seed with sample data**:
+   ```bash
+   npm run seed
+   ```
 
-### 3. Environment Variables
+5. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
 
-Copy the example environment file and configure your settings:
+The server will start on http://localhost:3001
 
-```bash
-cp .env.example .env
-```
+### Production Build
 
-Edit `.env` with your database credentials and other configurations.
-
-### 4. Seed Database (Optional)
-
-Populate the database with sample data:
-
-```bash
-npm run seed
-```
-
-### 5. Start the Server
-
-Development mode with auto-reload:
-```bash
-npm run dev
-```
-
-Production mode:
 ```bash
 npm run build
 npm start
 ```
 
-The server will start on `http://localhost:3001`
-
 ## API Endpoints
 
 ### Authentication
+- `POST /api/auth/login` - User login
 
-#### Login
-- **POST** `/api/auth/login`
-- **Body**: `{ "username": "admin", "password": "password123" }`
-- **Response**: `{ "token": "jwt_token", "user": {...} }`
-
-### Users (Admin Only)
-
-#### Get All Users
-- **GET** `/api/users`
-- **Headers**: `Authorization: Bearer <token>`
-
-#### Create User
-- **POST** `/api/users`
-- **Headers**: `Authorization: Bearer <token>`
-- **Body**: 
-```json
-{
-  "fullName": "John Doe",
-  "email": "john@example.com",
-  "username": "john",
-  "password": "password123",
-  "phone": "1234567890",
-  "role": "staff"
-}
-```
-
-#### Update User
-- **PUT** `/api/users/:id`
-- **Headers**: `Authorization: Bearer <token>`
-- **Body**: (same as create, all fields optional)
-
-#### Delete User
-- **DELETE** `/api/users/:id`
-- **Headers**: `Authorization: Bearer <token>`
+### Users (Admin only)
+- `GET /api/users` - Get all users
+- `POST /api/users` - Create new user
+- `PUT /api/users/:id` - Update user
+- `DELETE /api/users/:id` - Delete user
 
 ### Tasks
+- `GET /api/tasks` - Get all tasks (or user's assigned tasks)
+- `POST /api/tasks` - Create new task (Admin only)
+- `PUT /api/tasks/:id` - Update task
+- `POST /api/tasks/:id/messages` - Add chat message to task
+- `POST /api/tasks/:id/attachments` - Upload single attachment
+- `POST /api/tasks/:id/attachments/multiple` - Upload multiple attachments
 
-#### Get Tasks
-- **GET** `/api/tasks`
-- **Headers**: `Authorization: Bearer <token>`
-- **Note**: Returns all tasks for Admin/Viewer, only assigned tasks for Staff
+## Sample Data
 
-#### Create Task (Admin Only)
-- **POST** `/api/tasks`
-- **Headers**: `Authorization: Bearer <token>`
-- **Body**:
-```json
-{
-  "title": "Task Title",
-  "description": "Task description",
-  "priority": "high",
-  "dueDate": "2024-12-31",
-  "assigneeIds": ["user_id_1", "user_id_2"],
-  "status": "todo"
-}
-```
+After running `npm run seed`, you can log in with these credentials:
 
-#### Update Task
-- **PUT** `/api/tasks/:id`
-- **Headers**: `Authorization: Bearer <token>`
-- **Body**: (same as create, all fields optional)
-- **Note**: Staff can only update `status` (to "done") and `notes` for assigned tasks
+- **Admin**: username=`admin`, password=`password123`
+- **Staff 1**: username=`zahra`, password=`password123`  
+- **Staff 2**: username=`babak`, password=`password123`
 
-#### Add Chat Message
-- **POST** `/api/tasks/:id/messages`
-- **Headers**: `Authorization: Bearer <token>`
-- **Body**: `{ "text": "Message content" }`
+## Environment Variables
 
-#### Upload Attachment
-- **POST** `/api/tasks/:id/attachments`
-- **Headers**: `Authorization: Bearer <token>`
-- **Body**: `FormData` with `file` field
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SQLITE_DB_PATH` | Path to SQLite database file | `./data.db` |
+| `PORT` | Server port | `3001` |
+| `NODE_ENV` | Environment (development/production) | `development` |
+| `FRONTEND_URL` | Frontend URL for CORS | `http://localhost:3000` |
+| `JWT_SECRET` | JWT signing secret | `your-super-secret-jwt-key-here` |
 
-#### Upload Multiple Attachments
-- **POST** `/api/tasks/:id/attachments/multiple`
-- **Headers**: `Authorization: Bearer <token>`
-- **Body**: `FormData` with `files` field (max 5 files)
+## Scripts
+
+- `npm run dev` - Start development server with hot reload
+- `npm run build` - Build TypeScript to JavaScript
+- `npm start` - Start production server
+- `npm run setup` - Initialize database schema
+- `npm run seed` - Populate database with sample data
 
 ## Database Schema
 
-### Users Table
-- `id` (UUID, Primary Key)
-- `full_name` (VARCHAR)
-- `email` (VARCHAR, Unique)
-- `username` (VARCHAR, Unique)
-- `password` (VARCHAR, Hashed)
-- `phone` (VARCHAR, Optional)
-- `role` (ENUM: admin, staff, viewer)
-- `avatar_url` (TEXT)
-- `created_at`, `updated_at` (Timestamps)
+The SQLite database includes these tables:
+- `users` - User accounts with roles
+- `tasks` - Task information
+- `task_assignees` - Many-to-many relationship between tasks and users
+- `attachments` - File attachments for tasks
+- `chat_messages` - Task-specific chat messages
 
-### Tasks Table
-- `id` (UUID, Primary Key)
-- `title` (VARCHAR)
-- `description` (TEXT, Optional)
-- `priority` (ENUM: low, medium, high)
-- `due_date` (DATE)
-- `status` (ENUM: backlog, todo, doing, done, returned, approved, rejected)
-- `notes` (TEXT, Optional)
-- `created_at`, `updated_at` (Timestamps)
+## Technology Stack
 
-### Task Assignees (Junction Table)
-- `task_id` (UUID, Foreign Key)
-- `user_id` (UUID, Foreign Key)
-- `assigned_at` (Timestamp)
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Language**: TypeScript
+- **Database**: SQLite3
+- **Authentication**: JWT (jsonwebtoken)
+- **File Upload**: Multer
+- **Password Hashing**: bcrypt
+- **Security**: Helmet, CORS
+- **Development**: Nodemon, ts-node
 
-### Attachments Table
-- `id` (UUID, Primary Key)
-- `task_id` (UUID, Foreign Key)
-- `name` (VARCHAR)
-- `url` (TEXT)
-- `uploader_id` (UUID, Foreign Key)
-- `created_at` (Timestamp)
+## Migration from PostgreSQL
 
-### Chat Messages Table
-- `id` (UUID, Primary Key)
-- `task_id` (UUID, Foreign Key)
-- `user_id` (UUID, Foreign Key)
-- `text` (TEXT)
-- `timestamp` (Timestamp)
+This project has been migrated from PostgreSQL to SQLite. Key changes:
+- Database configuration moved from connection pool to file-based SQLite
+- All PostgreSQL-specific data types converted to SQLite equivalents
+- UUID generation moved from `gen_random_uuid()` to `uuidv4()` package
+- Query syntax updated from `$1, $2...` to `?` placeholders
+- JSON aggregation functions replaced with separate queries
 
-## Role-Based Permissions
-
-### Admin
-- Full access to all endpoints
-- Can create, read, update, delete users
-- Can create, read, update, delete tasks
-- Can assign/unassign users to tasks
-- Can upload files and send messages on any task
-
-### Staff
-- Can view only assigned tasks
-- Can update only `status` (to "done") and `notes` on assigned tasks
-- Can upload files and send messages on assigned tasks
-- Cannot access user management endpoints
-
-### Viewer
-- Can view all tasks (read-only)
-- Cannot modify tasks, upload files, or send messages
-- Cannot access user management endpoints
-
-## File Upload
-
-- **Supported Types**: Images (JPEG, PNG, GIF), PDFs, Documents (DOC, DOCX, XLS, XLSX), Text files (TXT, CSV)
-- **Size Limit**: 10MB per file
-- **Count Limit**: 5 files per request
-- **Storage**: Local filesystem in `uploads/` directory
-- **URL**: Accessible via `/uploads/filename`
-
-## Sample Login Credentials
-
-After running the seed script:
-
-- **Admin**: username=`admin`, password=`password123`
-- **Staff 1**: username=`zahra`, password=`password123`
-- **Staff 2**: username=`babak`, password=`password123`
-
-## Error Handling
-
-The API returns consistent error responses:
-
-```json
-{
-  "message": "Error description"
-}
-```
-
-Common HTTP status codes:
-- `200` - Success
-- `201` - Created
-- `400` - Bad Request
-- `401` - Unauthorized
-- `403` - Forbidden
-- `404` - Not Found
-- `409` - Conflict
-- `413` - Payload Too Large
-- `500` - Internal Server Error
-
-## Security Features
-
-- JWT token authentication
-- Password hashing with bcrypt
-- Role-based access control
-- CORS configuration
-- Security headers with Helmet
-- File type validation
-- SQL injection prevention with parameterized queries
-- Input validation and sanitization
-
-## Development
-
-### Available Scripts
-
-- `npm run dev` - Start development server with auto-reload
-- `npm run build` - Build TypeScript to JavaScript
-- `npm start` - Start production server
-- `npm run seed` - Seed database with sample data
-
-### Health Check
-
-The API provides a health check endpoint:
-- **GET** `/health`
-- **Response**: `{ "status": "OK", "message": "Task Management API is running", "timestamp": "..." }`
-
-## Production Deployment
-
-1. Set `NODE_ENV=production` in environment variables
-2. Configure production database credentials
-3. Change the JWT secret to a secure random string
-4. Set up proper CORS origins
-5. Configure reverse proxy (Nginx/Apache) if needed
-6. Set up SSL/TLS certificates
-7. Configure proper logging and monitoring
+The API behavior and data structure remain exactly the same - only the underlying database technology has changed.
